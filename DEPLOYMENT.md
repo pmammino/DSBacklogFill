@@ -33,10 +33,14 @@ Estimated time: ~15 minutes.
    (Neon-backed). Give it a name and pick a region close to your users.
 2. Click **Connect** to link it to this project. Vercel automatically injects
    these environment variables into all environments:
-   - `POSTGRES_PRISMA_URL`
-   - `POSTGRES_URL_NON_POOLING`
+   - Legacy Vercel Postgres: `POSTGRES_PRISMA_URL` + `POSTGRES_URL_NON_POOLING`
+   - Current Neon-backed integration: `DATABASE_URL` / `POSTGRES_URL`
+     (pooled) and `DATABASE_URL_UNPOOLED` / `POSTGRES_URL_NON_POOLING` (direct)
 
-   (These are exactly the two names the app's Prisma schema reads.)
+   The app resolves whichever pooled name is present at runtime, so you don't
+   need to rename anything — just make sure the store is **connected to this
+   project** and then **redeploy** so the variables are injected into the
+   running functions.
 
 ---
 
@@ -68,12 +72,20 @@ The schema needs to be pushed to the new database once. The simplest way is
 from your machine using the production connection strings:
 
 1. In Vercel, open **Storage → your database → `.env.local`** tab and copy the
-   `POSTGRES_PRISMA_URL` and `POSTGRES_URL_NON_POOLING` values.
-2. Locally in the repo:
+   **pooled** and **direct (non-pooling / unpooled)** connection strings.
+2. Locally in the repo, create a `.env` file mapping them to the two names the
+   Prisma CLI reads (the value is what matters, not the source name):
+
+   ```bash
+   # .env
+   POSTGRES_PRISMA_URL="<pooled connection string>"
+   POSTGRES_URL_NON_POOLING="<direct / non-pooling connection string>"
+   ```
+
+   Then:
 
    ```bash
    npm install
-   # paste the two POSTGRES_* values into a local .env file, then:
    npx prisma db push
    ```
 
@@ -91,6 +103,13 @@ from your machine using the production connection strings:
 Click **Deploy** (or **Redeploy** if you deployed earlier so the new env vars
 and database are picked up). The build runs `prisma generate && next build`
 automatically.
+
+> **Set the production branch to `main`.** Under **Settings → Git → Production
+> Branch**, make sure it's set to `main` (the trunk this project merges into).
+> If it points at an old feature branch, production won't pick up merged
+> changes. After changing env vars or the production branch, trigger a
+> **Redeploy** — env var changes do **not** apply to already-running
+> deployments.
 
 ---
 
