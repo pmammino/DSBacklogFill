@@ -1,0 +1,52 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("POSTGRES_PRISMA_URL")
+  directUrl = env("POSTGRES_URL_NON_POOLING")
+}
+
+enum RequestType {
+  RESEARCH
+  PROJECTIONS
+  ALGORITHM_UPDATE
+  OTHER
+}
+
+enum RequestStatus {
+  SUBMITTED
+  IN_PROGRESS
+  BLOCKED
+  DONE
+  CANCELLED
+}
+
+model Request {
+  id              String        @id @default(cuid())
+  requesterName   String
+  description     String
+  sport           String
+  type            RequestType
+  dataLink        String?
+  businessCase    String
+  dueDate         DateTime?
+  status          RequestStatus @default(SUBMITTED)
+
+  // JIRA linkage
+  jiraKey         String?
+  jiraUrl         String?
+
+  // Names of files attached to the JIRA ticket at submission time (files
+  // themselves live in JIRA, not here).
+  attachmentNames String[]      @default([])
+
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  @@index([sport])
+  @@index([type])
+  @@index([status])
+  @@index([createdAt])
+}
