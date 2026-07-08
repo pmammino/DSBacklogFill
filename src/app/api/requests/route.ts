@@ -57,6 +57,7 @@ export async function POST(req: Request) {
       const issue = await createJiraIssue(data);
       jiraKey = issue.key;
       jiraUrl = issue.url;
+      if (issue.warning) warnings.push(issue.warning);
 
       if (files.length > 0) {
         const result = await attachFilesToIssue(issue.key, files);
@@ -81,6 +82,7 @@ export async function POST(req: Request) {
   const created = await prisma.request.create({
     data: {
       requesterName: data.requesterName,
+      requesterAccountId: data.requesterAccountId,
       description: data.description,
       sport: data.sport,
       type: data.type,

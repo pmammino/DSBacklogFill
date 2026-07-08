@@ -71,6 +71,7 @@ export async function PATCH(
     where: { id: params.id },
     data: {
       requesterName: data.requesterName,
+      requesterAccountId: data.requesterAccountId,
       description: data.description,
       sport: data.sport,
       type: data.type,

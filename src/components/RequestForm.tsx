@@ -7,10 +7,12 @@ import {
   REQUEST_TYPE_OPTIONS,
   SPORTS,
 } from "@/lib/constants";
+import RequesterPicker from "./RequesterPicker";
 
 export interface RequestFormValues {
   id?: string;
   requesterName?: string;
+  requesterAccountId?: string | null;
   description?: string;
   sport?: string;
   type?: string;
@@ -96,14 +98,11 @@ export default function RequestForm({ initial, mode }: Props) {
           <label className="label" htmlFor="requesterName">
             Requester Name <span className="text-red-500">*</span>
           </label>
-          <input
-            id="requesterName"
-            name="requesterName"
-            className="input"
-            defaultValue={initial?.requesterName ?? ""}
-            required
+          <RequesterPicker
+            initialName={initial?.requesterName ?? ""}
+            initialAccountId={initial?.requesterAccountId ?? null}
+            error={errors.requesterName}
           />
-          {errors.requesterName && <p className="field-error">{errors.requesterName}</p>}
         </div>
 
         <div>

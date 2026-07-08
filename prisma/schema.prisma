@@ -26,6 +26,8 @@ enum RequestStatus {
 model Request {
   id              String        @id @default(cuid())
   requesterName   String
+  // Atlassian accountId of the requester, used to set the JIRA Reporter.
+  requesterAccountId String?
   description     String
   sport           String
   type            RequestType

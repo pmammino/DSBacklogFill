@@ -145,11 +145,29 @@ function buildDescriptionADF(request: {
 export interface CreateIssueResult {
   key: string;
   url: string;
+  /** Warning surfaced to the caller (e.g. the reporter could not be set). */
+  warning?: string;
+}
+
+async function postIssue(
+  config: JiraConfig,
+  fields: Record<string, unknown>,
+): Promise<Response> {
+  return fetch(`${config.baseUrl}/rest/api/3/issue`, {
+    method: "POST",
+    headers: {
+      Authorization: authHeader(config),
+      Accept: "application/json",
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ fields }),
+  });
 }
 
 /** Create a JIRA issue for a request. Returns the issue key and browse URL. */
 export async function createJiraIssue(request: {
   requesterName: string;
+  requesterAccountId?: string | null;
   description: string;
   sport: string;
   type: Request["type"];
@@ -188,15 +206,26 @@ export async function createJiraIssue(request: {
     fields.duedate = request.dueDate.toISOString().slice(0, 10);
   }
 
-  const res = await fetch(`${config.baseUrl}/rest/api/3/issue`, {
-    method: "POST",
-    headers: {
-      Authorization: authHeader(config),
-      Accept: "application/json",
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ fields }),
-  });
+  // Set the requester as the ticket Reporter when we have their account.
+  const hasReporter = Boolean(request.requesterAccountId);
+  if (hasReporter) {
+    fields.reporter = { accountId: request.requesterAccountId };
+  }
+
+  let res = await postIssue(config, fields);
+  let warning: string | undefined;
+
+  // Setting the reporter requires the API account to hold the "Modify Reporter"
+  // permission. If that's the only thing that failed, drop it and retry so a
+  // ticket is still created — the requester is also recorded in the body.
+  if (!res.ok && hasReporter) {
+    const firstError = await res.text();
+    delete fields.reporter;
+    res = await postIssue(config, fields);
+    if (res.ok) {
+      warning = `Ticket created, but the requester could not be set as Reporter (likely a JIRA permission). Detail: ${firstError}`;
+    }
+  }
 
   if (!res.ok) {
     const detail = await res.text();
@@ -207,7 +236,49 @@ export async function createJiraIssue(request: {
   return {
     key: data.key,
     url: `${config.baseUrl}/browse/${data.key}`,
+    warning,
   };
+}
+
+export interface JiraUser {
+  accountId: string;
+  displayName: string;
+  email?: string;
+}
+
+/** Search assignable/active Atlassian users for the requester picker. */
+export async function searchJiraUsers(query: string): Promise<JiraUser[]> {
+  const config = getJiraConfig();
+  const url = `${config.baseUrl}/rest/api/3/user/search?query=${encodeURIComponent(
+    query,
+  )}&maxResults=15`;
+
+  const res = await fetch(url, {
+    headers: {
+      Authorization: authHeader(config),
+      Accept: "application/json",
+    },
+  });
+
+  if (!res.ok) {
+    throw new Error(`JIRA user search failed (${res.status}): ${await res.text()}`);
+  }
+
+  const users = (await res.json()) as {
+    accountId: string;
+    displayName: string;
+    emailAddress?: string;
+    accountType?: string;
+    active?: boolean;
+  }[];
+
+  return users
+    .filter((u) => u.active !== false && u.accountType === "atlassian")
+    .map((u) => ({
+      accountId: u.accountId,
+      displayName: u.displayName,
+      email: u.emailAddress,
+    }));
 }
 
 /** Attach files to an existing JIRA issue. Best-effort per file. */
@@ -256,6 +327,7 @@ export async function updateJiraIssue(
   issueKey: string,
   request: {
     requesterName: string;
+    requesterAccountId?: string | null;
     description: string;
     sport: string;
     type: Request["type"];
@@ -278,15 +350,30 @@ export async function updateJiraIssue(
   };
   fields.duedate = request.dueDate ? request.dueDate.toISOString().slice(0, 10) : null;
 
-  const res = await fetch(`${config.baseUrl}/rest/api/3/issue/${issueKey}`, {
-    method: "PUT",
-    headers: {
-      Authorization: authHeader(config),
-      Accept: "application/json",
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ fields }),
-  });
+  const hasReporter = Boolean(request.requesterAccountId);
+  if (hasReporter) {
+    fields.reporter = { accountId: request.requesterAccountId };
+  }
+
+  const put = () =>
+    fetch(`${config.baseUrl}/rest/api/3/issue/${issueKey}`, {
+      method: "PUT",
+      headers: {
+        Authorization: authHeader(config),
+        Accept: "application/json",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ fields }),
+    });
+
+  let res = await put();
+
+  // If updating the reporter isn't permitted, retry without it so the rest of
+  // the edit still lands.
+  if (!res.ok && hasReporter) {
+    delete fields.reporter;
+    res = await put();
+  }
 
   if (!res.ok) {
     const detail = await res.text();
