@@ -66,43 +66,43 @@ Project → **Settings → Environment Variables**. Add each of these for the
 
 ---
 
-## 4. Create the database tables
+## 4. Create the database tables — automatic ✅
 
-The schema needs to be pushed to the new database once. The simplest way is
-from your machine using the production connection strings:
+**You don't need to do anything here.** The build automatically runs
+`prisma db push` (via `scripts/db-push.mjs`) on every deploy, which creates and
+keeps the `Request` table in sync with `prisma/schema.prisma`. It resolves the
+connection string from whichever env var your store provides, and skips quietly
+if no database is linked. Just make sure the store is connected (step 2) and
+deploy (step 5).
 
-1. In Vercel, open **Storage → your database → `.env.local`** tab and copy the
-   **pooled** and **direct (non-pooling / unpooled)** connection strings.
-2. Locally in the repo, create a `.env` file mapping them to the two names the
-   Prisma CLI reads (the value is what matters, not the source name):
+<details>
+<summary>Optional: run it manually from your machine instead</summary>
 
-   ```bash
-   # .env
-   POSTGRES_PRISMA_URL="<pooled connection string>"
-   POSTGRES_URL_NON_POOLING="<direct / non-pooling connection string>"
-   ```
+If you'd rather manage the schema by hand (and remove the step from the build),
+copy the pooled + direct connection strings from **Storage → your database →
+`.env.local`** into a local `.env`:
 
-   Then:
+```bash
+# .env
+POSTGRES_PRISMA_URL="<pooled connection string>"
+POSTGRES_URL_NON_POOLING="<direct / non-pooling connection string>"
+```
 
-   ```bash
-   npm install
-   npx prisma db push
-   ```
+```bash
+npm install
+npx prisma db push
+```
 
-   This creates the `Request` table and enums. You only do this once (and again
-   whenever `prisma/schema.prisma` changes).
-
-> Alternative (no local setup): use Vercel's **Storage → Query** console, or a
-> tool like Neon's SQL editor, and run the SQL from
-> `npx prisma migrate diff --from-empty --to-schema-datamodel prisma/schema.prisma --script`.
+</details>
 
 ---
 
 ## 5. Deploy
 
 Click **Deploy** (or **Redeploy** if you deployed earlier so the new env vars
-and database are picked up). The build runs `prisma generate && next build`
-automatically.
+and database are picked up). The build runs
+`prisma generate && node scripts/db-push.mjs && next build` automatically —
+generating the client, creating/syncing the database tables, then building.
 
 > **Set the production branch to `main`.** Under **Settings → Git → Production
 > Branch**, make sure it's set to `main` (the trunk this project merges into).
