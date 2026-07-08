@@ -46,7 +46,7 @@ export function getJiraConfig(): JiraConfig {
     email: email!,
     apiToken: apiToken!,
     projectKey: projectKey!,
-    issueType: process.env.JIRA_ISSUE_TYPE || "Task",
+    issueType: process.env.JIRA_ISSUE_TYPE || "Story",
     assigneeAccountId: process.env.JIRA_ASSIGNEE_ACCOUNT_ID || undefined,
     parentKey: process.env.JIRA_PARENT_KEY || undefined,
     defaultLabels: (process.env.JIRA_DEFAULT_LABELS || "")
@@ -159,7 +159,8 @@ export async function createJiraIssue(request: {
 }): Promise<CreateIssueResult> {
   const config = getJiraConfig();
 
-  const summary = `[${request.sport}] ${requestTypeLabel(request.type)} — ${request.requesterName}`.slice(
+  // Titles end with "- DS" (the requester is captured in the description body).
+  const summary = `[${request.sport}] ${requestTypeLabel(request.type)} - DS`.slice(
     0,
     240,
   );
@@ -265,7 +266,8 @@ export async function updateJiraIssue(
 ): Promise<void> {
   const config = getJiraConfig();
 
-  const summary = `[${request.sport}] ${requestTypeLabel(request.type)} — ${request.requesterName}`.slice(
+  // Titles end with "- DS" (the requester is captured in the description body).
+  const summary = `[${request.sport}] ${requestTypeLabel(request.type)} - DS`.slice(
     0,
     240,
   );
