@@ -148,4 +148,6 @@ Once live, open:
 | Requests save but no JIRA ticket (warning shown) | JIRA env vars missing/invalid. Check `/api/jira/health`. |
 | `401/403` from JIRA | API token wrong or `JIRA_EMAIL` doesn't match the token owner. |
 | Ticket created but not under the epic | `JIRA_PARENT_KEY` wrong, or the issue type can't be an epic child. Confirm `RD-7014` and `JIRA_ISSUE_TYPE=Story`. |
+| Requester not set as Reporter (warning shown) | The API account needs the **Modify Reporter** permission in project RD. The ticket is still created (requester recorded in the description) — grant the permission to enable it. |
+| Requester search box shows no users | The API account needs the **Browse users and groups** global permission. Without it, you can still type a free-text name. |
 | Attachments don't upload | JIRA attachment size/type limits, or the token lacks permission on RD. Check the warning message on submit. |

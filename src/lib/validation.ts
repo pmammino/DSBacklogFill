@@ -3,6 +3,7 @@ import { REQUEST_TYPE_OPTIONS, SPORTS } from "./constants";
 
 export interface RequestInput {
   requesterName: string;
+  requesterAccountId: string | null;
   description: string;
   sport: string;
   type: RequestType;
@@ -30,6 +31,7 @@ export function parseRequestForm(form: FormData): ParseResult {
   const errors: Record<string, string> = {};
 
   const requesterName = str(form, "requesterName");
+  const requesterAccountId = str(form, "requesterAccountId");
   const description = str(form, "description");
   const sport = str(form, "sport");
   const rawType = str(form, "type");
@@ -76,6 +78,7 @@ export function parseRequestForm(form: FormData): ParseResult {
     files,
     data: {
       requesterName,
+      requesterAccountId: requesterAccountId || null,
       description,
       sport,
       type: rawType as RequestType,

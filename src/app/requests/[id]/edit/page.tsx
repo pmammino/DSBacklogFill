@@ -39,6 +39,7 @@ export default async function EditRequestPage({
           initial={{
             id: request.id,
             requesterName: request.requesterName,
+            requesterAccountId: request.requesterAccountId,
             description: request.description,
             sport: request.sport,
             type: request.type,
